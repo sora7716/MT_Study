@@ -1,0 +1,422 @@
+#include "MathData.h"
+#include <cmath>
+//Vector3のメンバ変数すべてに1.0fを代入したVector3を作成
+Vector3 Vector3::MakeAllOne() {
+	return Vector3(1.0f, 1.0f, 1.0f);
+}
+
+//長さ(ノルム)
+float Vector3::Length() {
+	float result = std::sqrt(Vector3(x, y, z).Dot(Vector3(x, y, z)));
+	return result;
+}
+
+//正規化
+Vector3 Vector3::Normalize()const {
+	Vector3 result = {};
+	float len = Vector3(x, y, z).Length();
+	if (len != 0.0f) {
+		result.x = x / len;
+		result.y = y / len;
+		result.z = z / len;
+	}
+	return result;
+}
+
+//内積
+float Vector3::Dot(const Vector3& v)const {
+	Vector3 tempVector = Vector3(x, y, z) * v;
+	float dot = tempVector.x + tempVector.y + tempVector.z;
+	return dot;
+}
+
+//クロス積
+Vector3 Vector3::Cross(const Vector3& v)const {
+	// TODO: return ステートメントをここに挿入します
+	Vector3 result{};
+	result.x = y * v.z - z * v.y;
+	result.y = z * v.x - x * v.z;
+	result.z = x * v.y - y * v.x;
+	return result;
+}
+
+//線形補間
+Vector3 Vector3::Lerp(const Vector3& begin, const Vector3& end, float frame) {
+	// TODO: return ステートメントをここに挿入します
+	Vector3 result = {};
+	result.x = std::lerp(begin.x, end.x, frame);
+	result.y = std::lerp(begin.y, end.y, frame);
+	result.z = std::lerp(begin.z, end.z, frame);
+	return result;
+}
+
+//加法
+Vector3 Vector3::operator+(const Vector3& v)const {
+	return { x + v.x,y + v.y,z + v.z };
+}
+
+//減法
+Vector3 Vector3::operator-(const Vector3& v)const {
+	return { x - v.x,y - v.y,z - v.z };
+}
+
+//乗法
+Vector3 Vector3::operator*(const Vector3& v) const {
+	return { x * v.x,y * v.y,z * v.z };
+}
+
+//除法
+Vector3 Vector3::operator/(const Vector3& v)const {
+	return { x / v.x,y / v.y,z / v.z };
+}
+
+//加法(複合)
+Vector3& Vector3::operator+=(const Vector3& v) {
+	// TODO: return ステートメントをここに挿入します
+	x += v.x;
+	y += v.y;
+	z += v.z;
+	return *this;
+}
+
+//減法(複合)
+Vector3& Vector3::operator-=(const Vector3& v) {
+	// TODO: return ステートメントをここに挿入します
+	x -= v.x;
+	y -= v.y;
+	z -= v.z;
+	return *this;
+}
+
+//乗法(複合)
+Vector3& Vector3::operator*=(const Vector3& v) {
+	// TODO: return ステートメントをここに挿入します
+	x *= v.x;
+	y *= v.y;
+	z *= v.z;
+	return *this;
+}
+
+//除法
+Vector3& Vector3::operator/=(const Vector3& v) {
+	// TODO: return ステートメントをここに挿入します
+	x /= v.x;
+	y /= v.y;
+	z /= v.z;
+	return *this;
+}
+
+// スカラー倍
+Vector3 Vector3::operator*(float n)const {
+	return { x * n,y * n,z * n };
+}
+
+// スカラー倍(複合)
+Vector3& Vector3::operator*=(float n) {
+	// TODO: return ステートメントをここに挿入します
+	x *= n;
+	y *= n;
+	z *= n;
+	return *this;
+}
+
+Vector3 Vector3::operator-(float n) const {
+	return { x - n,y - n,z - n };
+}
+
+// 除法(float複合)
+Vector3& Vector3::operator/=(float n) {
+	// TODO: return ステートメントをここに挿入します
+	x /= n;
+	y /= n;
+	z /= n;
+	return *this;
+}
+
+//除法(float)
+Vector3 Vector3::operator/(float n)const {
+	return { x / n,y / n,z / n };
+}
+
+//加法(float)
+Vector3 Vector3::operator+(float n) {
+	Vector3 result = {
+		x + n,
+		y + n,
+		z + n
+	};
+	return result;
+}
+
+//加法(float)
+Vector3& Vector3::operator+=(float n) {
+	// TODO: return ステートメントをここに挿入します
+	x -= n;
+	y -= n;
+	z -= n;
+	return*this;
+}
+
+//マイナスにする
+Vector3 Vector3::operator-()const {
+	Vector3 result{
+	1.0f - x,
+	1.0f - y,
+	1.0f - z,
+	};
+	return result;
+}
+
+// vのほうが小さい
+bool Vector3::operator<(const Vector3& v) {
+	return x < v.x && y < v.y && z < v.z;
+}
+
+//加法
+Matrix4x4 Matrix4x4::operator+(const Matrix4x4& mat) const {
+	Matrix4x4 result = {};
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			result.m[i][j] = m[i][j] + mat.m[i][j];
+		}
+	}
+	return result;
+}
+
+//減法
+Matrix4x4 Matrix4x4::operator-(const Matrix4x4& mat) const {
+	Matrix4x4 result = {};
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			result.m[i][j] = m[i][j] - mat.m[i][j];
+		}
+	}
+	return result;
+}
+
+//乗法
+Matrix4x4 Matrix4x4::operator*(const Matrix4x4& mat) const {
+	Matrix4x4 result;
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			result.m[i][j] = 0;
+			for (int k = 0; k < 4; k++) {
+				result.m[i][j] += m[i][k] * mat.m[k][j];
+			}
+		}
+	}
+	return result;
+}
+
+//加法(複合)
+Matrix4x4& Matrix4x4::operator+=(const Matrix4x4& mat) {
+	// TODO: return ステートメントをここに挿入します
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			m[i][j] += mat.m[i][j];
+		}
+	}
+	return *this;
+}
+
+//減法(複合)
+Matrix4x4& Matrix4x4::operator-=(const Matrix4x4& mat) {
+	// TODO: return ステートメントをここに挿入します
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			m[i][j] -= mat.m[i][j];
+		}
+	}
+	return*this;
+}
+
+//逆行列
+Matrix4x4 Matrix4x4::Inverse() const {
+	Matrix4x4 result{};
+	float determinant = m[0][0] * (m[1][1] * m[2][2] * m[3][3] +
+		m[2][1] * m[3][2] * m[1][3] +
+		m[3][1] * m[1][2] * m[2][3] -
+		m[3][1] * m[2][2] * m[1][3] -
+		m[2][1] * m[1][2] * m[3][3] -
+		m[1][1] * m[3][2] * m[2][3]) -
+		m[0][1] * (m[1][0] * m[2][2] * m[3][3] +
+			m[2][0] * m[3][2] * m[1][3] +
+			m[3][0] * m[1][2] * m[2][3] -
+			m[3][0] * m[2][2] * m[1][3] -
+			m[2][0] * m[1][2] * m[3][3] -
+			m[1][0] * m[3][2] * m[2][3]) +
+		m[0][2] * (m[1][0] * m[2][1] * m[3][3] +
+			m[2][0] * m[3][1] * m[1][3] +
+			m[3][0] * m[1][1] * m[2][3] -
+			m[3][0] * m[2][1] * m[1][3] -
+			m[2][0] * m[1][1] * m[3][3] -
+			m[1][0] * m[3][1] * m[2][3]) -
+		m[0][3] * (m[1][0] * m[2][1] * m[3][2] +
+			m[2][0] * m[3][1] * m[1][2] +
+			m[3][0] * m[1][1] * m[2][2] -
+			m[3][0] * m[2][1] * m[1][2] -
+			m[2][0] * m[1][1] * m[3][2] -
+			m[1][0] * m[3][1] * m[2][2]);
+
+
+
+	if (determinant != 0) {
+		result.m[0][0] = (m[1][1] * m[2][2] * m[3][3] +
+			m[2][1] * m[3][2] * m[1][3] +
+			m[3][1] * m[1][2] * m[2][3] -
+			m[3][1] * m[2][2] * m[1][3] -
+			m[2][1] * m[1][2] * m[3][3] -
+			m[1][1] * m[3][2] * m[2][3]) /
+			determinant;
+
+		result.m[0][1] = -(m[0][1] * m[2][2] * m[3][3] +
+			m[2][1] * m[3][2] * m[0][3] +
+			m[3][1] * m[0][2] * m[2][3] -
+			m[3][1] * m[2][2] * m[0][3] -
+			m[2][1] * m[0][2] * m[3][3] -
+			m[0][1] * m[3][2] * m[2][3]) /
+			determinant;
+
+		result.m[0][2] = (m[0][1] * m[1][2] * m[3][3] +
+			m[1][1] * m[3][2] * m[0][3] +
+			m[3][1] * m[0][2] * m[1][3] -
+			m[3][1] * m[1][2] * m[0][3] -
+			m[1][1] * m[0][2] * m[3][3] -
+			m[0][1] * m[3][2] * m[1][3]) /
+			determinant;
+
+		result.m[0][3] = -(m[0][1] * m[1][2] * m[2][3] +
+			m[1][1] * m[2][2] * m[0][3] +
+			m[2][1] * m[0][2] * m[1][3] -
+			m[2][1] * m[1][2] * m[0][3] -
+			m[1][1] * m[0][2] * m[2][3] -
+			m[0][1] * m[2][2] * m[1][3]) /
+			determinant;
+
+
+		result.m[1][0] = -(m[1][0] * m[2][2] * m[3][3] +
+			m[2][0] * m[3][2] * m[1][3] +
+			m[3][0] * m[1][2] * m[2][3] -
+			m[3][0] * m[2][2] * m[1][3] -
+			m[2][0] * m[1][2] * m[3][3] -
+			m[1][0] * m[3][2] * m[2][3]) /
+			determinant;
+
+		result.m[1][1] = (m[0][0] * m[2][2] * m[3][3] +
+			m[2][0] * m[3][2] * m[0][3] +
+			m[3][0] * m[0][2] * m[2][3] -
+			m[3][0] * m[2][2] * m[0][3] -
+			m[2][0] * m[0][2] * m[3][3] -
+			m[0][0] * m[3][2] * m[2][3]) /
+			determinant;
+
+		result.m[1][2] = -(m[0][0] * m[1][2] * m[3][3] +
+			m[1][0] * m[3][2] * m[0][3] +
+			m[3][0] * m[0][2] * m[1][3] -
+			m[3][0] * m[1][2] * m[0][3] -
+			m[1][0] * m[0][2] * m[3][3] -
+			m[0][0] * m[3][2] * m[1][3]) /
+			determinant;
+
+		result.m[1][3] = (m[0][0] * m[1][2] * m[2][3] +
+			m[1][0] * m[2][2] * m[0][3] +
+			m[2][0] * m[0][2] * m[1][3] -
+			m[2][0] * m[1][2] * m[0][3] -
+			m[1][0] * m[0][2] * m[2][3] -
+			m[0][0] * m[2][2] * m[1][3]) /
+			determinant;
+
+
+		result.m[2][0] = (m[1][0] * m[2][1] * m[3][3] +
+			m[2][0] * m[3][1] * m[1][3] +
+			m[3][0] * m[1][1] * m[2][3] -
+			m[3][0] * m[2][1] * m[1][3] -
+			m[2][0] * m[1][1] * m[3][3] -
+			m[1][0] * m[3][1] * m[2][3]) /
+			determinant;
+
+		result.m[2][1] = -(m[0][0] * m[2][1] * m[3][3] +
+			m[2][0] * m[3][1] * m[0][3] +
+			m[3][0] * m[0][1] * m[2][3] -
+			m[3][0] * m[2][1] * m[0][3] -
+			m[2][0] * m[0][1] * m[3][3] -
+			m[0][0] * m[3][1] * m[2][3]) /
+			determinant;
+
+		result.m[2][2] = (m[0][0] * m[1][1] * m[3][3] +
+			m[1][0] * m[3][1] * m[0][3] +
+			m[3][0] * m[0][1] * m[1][3] -
+			m[3][0] * m[1][1] * m[0][3] -
+			m[1][0] * m[0][1] * m[3][3] -
+			m[0][0] * m[3][1] * m[1][3]) /
+			determinant;
+
+		result.m[2][3] = -(m[0][0] * m[1][1] * m[2][3] +
+			m[1][0] * m[2][1] * m[0][3] +
+			m[2][0] * m[0][1] * m[1][3] -
+			m[2][0] * m[1][1] * m[0][3] -
+			m[1][0] * m[0][1] * m[2][3] -
+			m[0][0] * m[2][1] * m[1][3]) /
+			determinant;
+
+		result.m[3][0] = -(m[1][0] * m[2][1] * m[3][2] +
+			m[2][0] * m[3][1] * m[1][2] +
+			m[3][0] * m[1][1] * m[2][2] -
+			m[3][0] * m[2][1] * m[1][2] -
+			m[2][0] * m[1][1] * m[3][2] -
+			m[1][0] * m[3][1] * m[2][2]) /
+			determinant;
+
+		result.m[3][1] = (m[0][0] * m[2][1] * m[3][2] +
+			m[2][0] * m[3][1] * m[0][2] +
+			m[3][0] * m[0][1] * m[2][2] -
+			m[3][0] * m[2][1] * m[0][2] -
+			m[2][0] * m[0][1] * m[3][2] -
+			m[0][0] * m[3][1] * m[2][2]) /
+			determinant;
+
+		result.m[3][2] = -(m[0][0] * m[1][1] * m[3][2] +
+			m[1][0] * m[3][1] * m[0][2] +
+			m[3][0] * m[0][1] * m[1][2] -
+			m[3][0] * m[1][1] * m[0][2] -
+			m[1][0] * m[0][1] * m[3][2] -
+			m[0][0] * m[3][1] * m[1][2]) /
+			determinant;
+
+		result.m[3][3] = (m[0][0] * m[1][1] * m[2][2] +
+			m[1][0] * m[2][1] * m[0][2] +
+			m[2][0] * m[0][1] * m[1][2] -
+			m[2][0] * m[1][1] * m[0][2] -
+			m[1][0] * m[0][1] * m[2][2] -
+			m[0][0] * m[2][1] * m[1][2]) /
+			determinant;
+	}
+
+	return result;
+}
+
+//転置行列
+Matrix4x4 Matrix4x4::Transpose() {
+	Matrix4x4 result = {};
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			result.m[i][j] = this->m[j][i];
+		}
+	}
+	return result;
+}
+
+//逆転置行列
+Matrix4x4 Matrix4x4::InverseTranspose() {
+	Matrix4x4 result = this->Inverse();
+	return result.Transpose();
+}
+
+//単位行列
+Matrix4x4 Matrix4x4::Identity4x4() {
+	Matrix4x4 result = {};
+	for (int i = 0; i < 4; i++) {
+		result.m[i][i] = 1;
+	}
+	return result;
+}

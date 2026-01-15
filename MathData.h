@@ -1,0 +1,122 @@
+#pragma once
+/// <summary>
+/// 3次元ベクトル
+/// </summary>
+struct Vector3 final {
+	float x;
+	float y;
+	float z;
+
+	/// <summary>
+	/// Vector3のメンバ変数すべてに1.0fを代入したVector3を作成
+	/// </summary>
+	/// <returns>Vector3</returns>
+	static Vector3 MakeAllOne();
+
+	//長さ(ノルム)
+	float Length();
+	// 正規化
+	Vector3 Normalize()const;
+
+	/// <summary>
+	/// 内積
+	/// </summary>
+	/// <param name="v">ベクトル</param>
+	/// <returns>内積</returns>
+	float Dot(const Vector3& v)const;
+
+	/// <summary>
+	/// クロス積
+	/// </summary>
+	/// <param name="v">ベクトル</param>
+	/// <returns>クロス積</returns>
+	Vector3 Cross(const Vector3& v)const;
+
+	/// <summary>
+	/// 線形補間
+	/// </summary>
+	/// <param name="begin">最初のベクトル</param>
+	/// <param name="end">最後のベクトル</param>
+	/// <param name="frame">フレーム</param>
+	/// <returns>現在のベクトル</returns>
+	static Vector3 Lerp(const Vector3& begin, const Vector3& end, float frame);
+
+	// 円関数を使用した線形補間
+	//加法
+	Vector3 operator+(const Vector3& v)const;
+	//減法
+	Vector3 operator-(const Vector3& v)const;
+	//乗法
+	Vector3 operator*(const Vector3& v)const;
+	//除法
+	Vector3 operator/(const Vector3& v)const;
+	//加法(複合)
+	Vector3& operator+=(const Vector3& v);
+	//減法(複合)
+	Vector3& operator-=(const Vector3& v);
+	//乗法(複合)
+	Vector3& operator*=(const Vector3& v);
+	//除法(複合)
+	Vector3& operator/=(const Vector3& v);
+	// スカラー倍
+	Vector3 operator*(float n)const;
+	// スカラー倍(複合)
+	Vector3& operator*=(float n);
+	//減法(float)
+	Vector3 operator-(float n)const;
+	// 除法(float複合)
+	Vector3& operator/=(float n);
+	//除法(float)
+	Vector3 operator/(float n)const;
+	//加法(float)
+	Vector3 operator+(float n);
+	//加法(float)
+	Vector3& operator+=(float n);
+	//マイナスにする
+	Vector3 operator-()const;
+	// vのほうが小さい
+	bool operator<(const Vector3& v);
+};
+
+/// <summary>
+/// 4x4の行列
+/// </summary>
+struct Matrix4x4 final {
+	float m[4][4];
+
+	//加法
+	Matrix4x4 operator+(const Matrix4x4& mat)const;
+	//減法
+	Matrix4x4 operator-(const Matrix4x4& mat)const;
+	//乗法
+	Matrix4x4 operator*(const Matrix4x4& mat)const;
+	//加法(複合)
+	Matrix4x4& operator+=(const Matrix4x4& mat);
+	//減法(複合)
+	Matrix4x4& operator-=(const Matrix4x4& mat);
+
+	/// <summary>
+	/// 逆行列
+	/// </summary>
+	/// <returns>逆行列</returns>
+	Matrix4x4 Inverse()const;
+
+	/// <summary>
+	/// 転置行列
+	/// </summary>
+	/// <returns>転置行列</returns>
+	Matrix4x4 Transpose();
+
+	/// <summary>
+	/// 逆転置行列
+	/// </summary>
+	/// <returns>逆転置行列</returns>
+	Matrix4x4 InverseTranspose();
+
+	/// <summary>
+	/// 単位行列
+	/// </summary>
+	/// <returns>単位行列</returns>
+	static Matrix4x4 Identity4x4();
+};
+
