@@ -160,9 +160,9 @@ Vector3& Vector3::operator+=(float n) {
 //マイナスにする
 Vector3 Vector3::operator-()const {
 	Vector3 result{
-	1.0f - x,
-	1.0f - y,
-	1.0f - z,
+	x * -1.0f,
+	y * -1.0f,
+	z * -1.0f,
 	};
 	return result;
 }

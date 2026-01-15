@@ -176,7 +176,7 @@ Matrix4x4 DirectionToDirection(const Vector3& from, const Vector3& to) {
 
 	if (cosTheta <= -1.0f) {
 		if (u.x != 0.0f || u.y != 0.0f) {
-			n = Vector3(u.x, -u.y, 0.0f).Normalize();
+			n = Vector3(u.y, -u.x, 0.0f).Normalize();
 		} else if (u.x != 0.0f || u.z != 0.0f) {
 			n = Vector3(u.z, 0.0f, -u.x).Normalize();
 		}
