@@ -35,7 +35,7 @@ void Camera::SetTranslate(const Vector3& translate) {
 
 //ビュープロジェクション行列の作成
 void Camera::MakeViewProjectionMatrix() {
-	worldMatrix_ = Rendering::MakeAffineMatrix(scale_, rotate_, translate_);
+	worldMatrix_ = Rendering::MakeSTRMatrix(scale_, rotate_, translate_);
 	viewMatrix_ = worldMatrix_.Inverse();
 	projectionMatrix_ = Rendering::MakePerspectiveFovMatrix(0.45f, windowWidth_ / windowHeight_, 0.1f, 100.0f);
 	viewProjectionMatrix_ = viewMatrix_ * projectionMatrix_;

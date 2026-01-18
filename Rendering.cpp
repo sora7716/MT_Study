@@ -169,3 +169,63 @@ Matrix4x4 Rendering::MakeBillboardMatrix(const Matrix4x4& cameraWorldMatrix, con
 	billboardMatrix.m[3][2] = 0.0f; // Z座標を0に設定
 	return billboardMatrix;
 }
+
+
+Matrix4x4 Rendering::DirectionToDirection(const Vector3& from, const Vector3& to) {
+	Matrix4x4 result = Matrix4x4::Identity4x4();
+	Vector3 u = from.Normalize();
+	Vector3 v = to.Normalize();
+	Vector3 n = (u.Cross(v)).Normalize();
+	float cosTheta = u.Dot(v);
+	float sinTheta = u.Cross(v).Length();
+
+	if (cosTheta <= -1.0f) {
+		if (u.x != 0.0f || u.y != 0.0f) {
+			n = Vector3(u.y, -u.x, 0.0f).Normalize();
+		} else if (u.x != 0.0f || u.z != 0.0f) {
+			n = Vector3(u.z, 0.0f, -u.x).Normalize();
+		}
+	}
+
+	result.m[0][0] = std::pow(n.x, 2.0f) * (1.0f - cosTheta) + cosTheta;
+	result.m[0][1] = n.x * n.y * (1.0f - cosTheta) + n.z * sinTheta;
+	result.m[0][2] = n.x * n.z * (1.0f - cosTheta) - n.y * sinTheta;
+
+	result.m[1][0] = n.x * n.y * (1.0f - cosTheta) - n.z * sinTheta;
+	result.m[1][1] = std::pow(n.y, 2.0f) * (1.0f - cosTheta) + cosTheta;
+	result.m[1][2] = n.y * n.z * (1.0f - cosTheta) + n.x * sinTheta;
+
+	result.m[2][0] = n.x * n.z * (1.0f - cosTheta) + n.y * sinTheta;
+	result.m[2][1] = n.y * n.z * (1.0f - cosTheta) - n.x * sinTheta;
+	result.m[2][2] = std::pow(n.z, 2.0f) * (1.0f - cosTheta) + cosTheta;
+	return result;
+}
+
+//LookAt関数
+Matrix4x4 Rendering::MakeLookAtMatrix(const Vector3& eye, const Vector3& target, const Vector3& up) {
+	//軸
+	Vector3 z = (target - eye).Normalize();
+	Vector3 x = up.Cross(z).Normalize();
+	Vector3 y = z.Cross(x);
+
+	Matrix4x4 result = Matrix4x4::Identity4x4();
+	//1行目
+	result.m[0][0] = x.x;
+	result.m[0][1] = x.y;
+	result.m[0][2] = x.z;
+	result.m[0][3] = -eye.Dot(x);
+
+	//2行目
+	result.m[1][0] = y.x;
+	result.m[1][1] = y.y;
+	result.m[1][2] = y.z;
+	result.m[1][3] = -eye.Dot(y);
+
+	//3行目
+	result.m[2][0] = z.x;
+	result.m[2][1] = z.y;
+	result.m[2][2] = z.z;
+	result.m[2][3] = -eye.Dot(z);
+
+	return result;
+}

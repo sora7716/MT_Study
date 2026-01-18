@@ -1,3 +1,4 @@
+#define NOMINMAX
 #include <Novice.h>
 #include "MathData.h"
 #include "Rendering.h"
@@ -6,6 +7,9 @@
 #include <cstdint>
 #include <numbers>
 #include <cmath>
+#include <vector>
+#include <array>
+#include <algorithm>
 #ifdef USE_IMGUI
 #include <imgui.h>
 #endif // USE_IMGUI
@@ -18,8 +22,27 @@ struct SphereData {
 	float radius;   //半径
 };
 
-struct Matrix3x3 {
-	float m[3][3];
+//AABB
+struct AABB {
+	Vector3 min;//最小値
+	Vector3 max;//最大値
+
+	/// <summary>
+	/// AABB同士の当たり判定
+	/// </summary>
+	/// <param name="aabb">aabb</param>
+	/// <returns>衝突したかのフラグ</returns>
+	bool IsCollision(const AABB& aabb) {
+		return min.x <= aabb.max.x && max.x >= aabb.min.x &&
+			min.y <= aabb.max.y && max.y >= aabb.min.y &&
+			min.z <= aabb.max.z && max.z >= aabb.min.z;
+	}
+};
+
+//AABBを描画する用のデータ
+struct Drawaabb {
+	AABB aabb;
+	uint32_t color;
 };
 
 /// <summary>
@@ -166,34 +189,70 @@ void DrawSphere(const SphereData& sphereData, const Matrix4x4& viewProjection, c
 	}
 }
 
-Matrix4x4 DirectionToDirection(const Vector3& from, const Vector3& to) {
-	Matrix4x4 result = Matrix4x4::Identity4x4();
-	Vector3 u = from.Normalize();
-	Vector3 v = to.Normalize();
-	Vector3 n = (u.Cross(v)).Normalize();
-	float cosTheta = u.Dot(v);
-	float sinTheta = u.Cross(v).Length();
+/// <summary>
+/// AABBの描画
+/// </summary>
+/// <param name="aabb">aabb</param>
+/// <param name="color">カラー</param>
+/// <param name="viewProjection">ビュープロジェクション</param>
+/// <param name="viewportMatrix">ビューポート</param>
+void DrawAABB(AABB& aabb, uint32_t color, const Matrix4x4& viewProjection, const Matrix4x4& viewportMatrix) {
+	//矩形の頂点数
+	const int32_t kRectVertexCount = 4;
 
-	if (cosTheta <= -1.0f) {
-		if (u.x != 0.0f || u.y != 0.0f) {
-			n = Vector3(u.y, -u.x, 0.0f).Normalize();
-		} else if (u.x != 0.0f || u.z != 0.0f) {
-			n = Vector3(u.z, 0.0f, -u.x).Normalize();
-		}
+	//ローカル座標
+	std::vector<Vector3>localVertices;
+	localVertices.resize(kRectVertexCount * 2);
+
+	//minがmaxを超えないようにする
+	aabb.min.x = std::min(aabb.min.x, aabb.max.x);
+	aabb.max.x = std::max(aabb.min.x, aabb.max.x);
+	aabb.min.y = std::min(aabb.min.y, aabb.max.y);
+	aabb.max.y = std::max(aabb.min.y, aabb.max.y);
+	aabb.min.z = std::min(aabb.min.z, aabb.max.z);
+	aabb.max.z = std::max(aabb.min.z, aabb.max.z);
+
+	//正面
+	localVertices[0] = { aabb.min.x,aabb.max.y,aabb.min.z };//左上
+	localVertices[1] = { aabb.max.x,aabb.max.y,aabb.min.z };//右上
+	localVertices[2] = { aabb.max.x,aabb.min.y,aabb.min.z };//右下
+	localVertices[3] = { aabb.min.x,aabb.min.y,aabb.min.z };//左下
+
+	//背面
+	localVertices[kRectVertexCount] = { aabb.min.x,aabb.max.y,aabb.max.z };//左上
+	localVertices[kRectVertexCount + 1] = { aabb.max.x,aabb.max.y,aabb.max.z };//右上
+	localVertices[kRectVertexCount + 2] = { aabb.max.x,aabb.min.y,aabb.max.z };//右下
+	localVertices[kRectVertexCount + 3] = { aabb.min.x,aabb.min.y,aabb.max.z };//左下
+
+	//スクリーン座標
+	std::vector<Vector3>screenVertices;
+	screenVertices.resize(kRectVertexCount * 2);
+
+	//座標変換
+	for (int32_t i = 0; i < kRectVertexCount * 2; i++) {
+		screenVertices[i] = Rendering::Transform(localVertices[i], viewProjection);
+		screenVertices[i] = Rendering::Transform(screenVertices[i], viewportMatrix);
 	}
 
-	result.m[0][0] = std::pow(n.x, 2.0f) * (1.0f - cosTheta) + cosTheta;
-	result.m[0][1] = n.x * n.y * (1.0f - cosTheta) + n.z * sinTheta;
-	result.m[0][2] = n.x * n.z * (1.0f - cosTheta) - n.y * sinTheta;
+	//描画
+	const int32_t kAABBEdgeCount = 12;//辺の数
 
-	result.m[1][0] = n.x * n.y * (1.0f - cosTheta) - n.z * sinTheta;
-	result.m[1][1] = std::pow(n.y, 2.0f) * (1.0f - cosTheta) + cosTheta;
-	result.m[1][2] = n.y * n.z * (1.0f - cosTheta) + n.x * sinTheta;
+	//12本の辺をIndexでペアにする
+	std::array<std::pair<int32_t, int32_t>, kAABBEdgeCount>aabbEadges = {
+		{{0,1},{1,2},{2,3},{3,0} ,
+		 {0,4},{1,5},{2,6},{3,7},
+		 {4,5},{5,6},{6,7},{ 7,4 }}
+	};
 
-	result.m[2][0] = n.x * n.z * (1.0f - cosTheta) + n.y * sinTheta;
-	result.m[2][1] = n.y * n.z * (1.0f - cosTheta) - n.x * sinTheta;
-	result.m[2][2] = std::pow(n.z, 2.0f) * (1.0f - cosTheta) + cosTheta;
-	return result;
+	//描画
+	for (auto [begin, end] : aabbEadges) {
+		Novice::DrawLine(
+			static_cast<int32_t>(screenVertices[begin].x), static_cast<int32_t>(screenVertices[begin].y),
+			static_cast<int32_t>(screenVertices[end].x), static_cast<int32_t>(screenVertices[end].y),
+			color
+		);
+	}
+
 }
 
 // Windowsアプリでのエントリーポイント(main関数)
@@ -210,18 +269,15 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	Camera* camera = new Camera();
 	camera->Initialize(1280.0f, 720.0f);
 	Vector3 cameraRotate = { 0.26f,0.0f,0.0f };
-	Vector3 cameraTranslate = { 0.0f,1.9f,-6.49f };
+	Vector3 cameraTranslate = { 0.0f,0.0f,-6.49f };
 
 	//球
 	SphereData sphereData = { .center{},.radius = 1.0f };
 
-	Vector3 from0 = Vector3(1.0f, 0.7f, 0.5f).Normalize();
-	Vector3 to0 = -from0;
-	Vector3 from1 = Vector3(-0.6f, 0.9f, 0.2f);
-	Vector3 to1 = Vector3(0.4f, 0.7f, -0.5f);
-	Matrix4x4 rotateMatrix0 = DirectionToDirection(Vector3(1.0f, 0.0f, 0.0f).Normalize(), Vector3(-1.0f, 0.0f, 0.0f).Normalize());
-	Matrix4x4 rotateMatrix1 = DirectionToDirection(from0, to0);
-	Matrix4x4 rotateMatrix2 = DirectionToDirection(from1, to1);
+	//AABB
+	std::array<Drawaabb, 2>drawAABBs;
+	drawAABBs[0] = { {{-0.5f,-0.5f,-0.5f},{0.0f,0.0f,0.0f}},BLACK };
+	drawAABBs[1] = { {{ 0.2f,0.2f,0.2f },{1.0f,1.0f,1.0f}},BLACK };
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -241,12 +297,28 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 		camera->SetRotate(cameraRotate);
 		camera->SetTranslate(cameraTranslate);
 
+		//衝突判定
+		if (drawAABBs[0].aabb.IsCollision(drawAABBs[1].aabb)) {
+			drawAABBs[0].color = RED;
+			drawAABBs[1].color = RED;
+		} else {
+			drawAABBs[0].color = BLACK;
+			drawAABBs[1].color = BLACK;
+		}
+
 #ifdef USE_IMGUI
 		ImGui::DragFloat3("camera.rotate", &cameraRotate.x, 0.1f);
 		ImGui::DragFloat3("camera.translate", &cameraTranslate.x, 0.1f);
 		ImGui::Separator();
 		ImGui::DragFloat3("sphere.translate", &sphereData.center.x, 0.1f);
 		ImGui::DragFloat("sphere.radius", &sphereData.radius, 0.1f, 0.0f, 10.0f);
+		for (int32_t i = 0; i < drawAABBs.size(); i++) {
+			ImGui::Separator();
+			ImGui::PushID(i);
+			ImGui::DragFloat3("aabb.min", &drawAABBs[i].aabb.min.x, 0.1f);
+			ImGui::DragFloat3("aabb.max", &drawAABBs[i].aabb.max.x, 0.1f);
+			ImGui::PopID();
+		}
 #endif // USE_IMGUI
 
 		///
@@ -261,12 +333,11 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 		DrawGrid(camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
 
 		//球の描画
-		DrawSphere(sphereData, camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
+		//DrawSphere(sphereData, camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
 
-		const int kRowHeight = 20;
-		ScreenPrintf::GetInstance()->MatrixScreenPrintf(0, 0, rotateMatrix0, "rotateMatrix0");
-		ScreenPrintf::GetInstance()->MatrixScreenPrintf(0, kRowHeight * 5, rotateMatrix1, "rotateMatrix1");
-		ScreenPrintf::GetInstance()->MatrixScreenPrintf(0, kRowHeight * 10, rotateMatrix2, "rotateMatrix2");
+		for (Drawaabb& drawAABB : drawAABBs) {
+			DrawAABB(drawAABB.aabb, drawAABB.color, camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
+		}
 		///
 		/// ↑描画処理ここまで
 		///

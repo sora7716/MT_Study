@@ -129,5 +129,16 @@ public://メンバ関数
 	/// <param name="rotate">回転</param>
 	/// <returns>ビルボード行列</returns>
 	static Matrix4x4 MakeBillboardMatrix(const Matrix4x4& cameraWorldMatrix, const Vector3& rotate);
+
+	static Matrix4x4 DirectionToDirection(const Vector3& from, const Vector3& to);
+
+	/// <summary>
+	/// LookAt関数
+	/// </summary>
+	/// <param name="eye">見ている方向</param>
+	/// <param name="target">対象</param>
+	/// <param name="up">上</param>
+	/// <returns>LookAt行列</returns>
+	static Matrix4x4 MakeLookAtMatrix(const Vector3& eye, const Vector3& target, const Vector3& up);
 };
 
