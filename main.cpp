@@ -92,6 +92,101 @@ bool IsCollision(const OBB& obb, const Sphere& sphere) {
 	return IsCollision(aabbOBBLocal, sphereOBBLocal);
 }
 
+// OBBとAABB/OBB
+bool IsCollision(const OBB& obb1, const OBB& obb2) {
+	//分割軸の数
+	Vector3 separateAxes[15];
+	//面の法線
+	//OBB1
+	separateAxes[0] = obb1.orientations[0];
+	separateAxes[1] = obb1.orientations[1];
+	separateAxes[2] = obb1.orientations[2];
+	//OBB2
+	separateAxes[3] = obb2.orientations[0];
+	separateAxes[4] = obb2.orientations[1];
+	separateAxes[5] = obb2.orientations[2];
+
+	//9つの辺のクロス積
+	separateAxes[6] = obb1.orientations[0].Cross(obb2.orientations[0]);
+	separateAxes[7] = obb1.orientations[0].Cross(obb2.orientations[1]);
+	separateAxes[8] = obb1.orientations[0].Cross(obb2.orientations[2]);
+	separateAxes[9] = obb1.orientations[1].Cross(obb2.orientations[0]);
+	separateAxes[10] = obb1.orientations[1].Cross(obb2.orientations[1]);
+	separateAxes[11] = obb1.orientations[1].Cross(obb2.orientations[2]);
+	separateAxes[12] = obb1.orientations[2].Cross(obb2.orientations[0]);
+	separateAxes[13] = obb1.orientations[2].Cross(obb2.orientations[1]);
+	separateAxes[14] = obb1.orientations[2].Cross(obb2.orientations[2]);
+
+	//半分のベクトル
+	//OBB1
+	Vector3 obb1HalfVector[3]{
+		obb1.orientations[0] * obb1.size.x,
+		obb1.orientations[1] * obb1.size.y,
+		obb1.orientations[2] * obb1.size.z,
+	};
+	//OBB2
+	Vector3 obb2HalfVector[3]{
+		obb2.orientations[0] * obb2.size.x,
+		obb2.orientations[1] * obb2.size.y,
+		obb2.orientations[2] * obb2.size.z,
+	};
+
+	//頂点の数
+	const int kCornerNum = 8;
+
+	// 点(頂点)
+	Vector3 obb1Corners[kCornerNum] = {
+	  obb1.center + obb1HalfVector[0] + obb1HalfVector[1] + obb1HalfVector[2],//背面の右上
+	  obb1.center + obb1HalfVector[0] + obb1HalfVector[1] - obb1HalfVector[2],//正面の右上
+	  obb1.center + obb1HalfVector[0] - obb1HalfVector[1] + obb1HalfVector[2],//背面の右下
+	  obb1.center + obb1HalfVector[0] - obb1HalfVector[1] - obb1HalfVector[2],//正面の右下
+	  obb1.center - obb1HalfVector[0] + obb1HalfVector[1] + obb1HalfVector[2],//背面の左上
+	  obb1.center - obb1HalfVector[0] + obb1HalfVector[1] - obb1HalfVector[2],//正面の左上
+	  obb1.center - obb1HalfVector[0] - obb1HalfVector[1] + obb1HalfVector[2],//背面の左下
+	  obb1.center - obb1HalfVector[0] - obb1HalfVector[1] - obb1HalfVector[2],//正面の左下
+	};
+	Vector3 obb2Corners[kCornerNum] = {
+	 obb2.center + obb2HalfVector[0] + obb2HalfVector[1] + obb2HalfVector[2],//背面の右上
+	 obb2.center + obb2HalfVector[0] + obb2HalfVector[1] - obb2HalfVector[2],//正面の右上
+	 obb2.center + obb2HalfVector[0] - obb2HalfVector[1] + obb2HalfVector[2],//背面の右下
+	 obb2.center + obb2HalfVector[0] - obb2HalfVector[1] - obb2HalfVector[2],//正面の右下
+	 obb2.center - obb2HalfVector[0] + obb2HalfVector[1] + obb2HalfVector[2],//背面の左上
+	 obb2.center - obb2HalfVector[0] + obb2HalfVector[1] - obb2HalfVector[2],//正面の左上
+	 obb2.center - obb2HalfVector[0] - obb2HalfVector[1] + obb2HalfVector[2],//背面の左下
+	 obb2.center - obb2HalfVector[0] - obb2HalfVector[1] - obb2HalfVector[2],//正面の左下
+	};
+
+	// 中心点間のベクトル
+	Vector3 centerToCenter = obb1.center - obb2.center;
+
+	//当たり判定の計算
+	for (Vector3& separateAxis : separateAxes) {
+		separateAxis = separateAxis.Normalize();
+		float minOBB1 = (std::numeric_limits<float>::max)();
+		float maxOBB1 = (std::numeric_limits<float>::lowest)();
+		float minOBB2 = minOBB1;
+		float maxOBB2 = maxOBB1;
+		for (int32_t cornerIndex = 0; cornerIndex < kCornerNum; cornerIndex++) {
+			float obb1Distance = obb1Corners[cornerIndex].Dot(separateAxis);
+			minOBB1 = (std::min)(obb1Distance, minOBB1);
+			maxOBB1 = (std::max)(obb1Distance, maxOBB1);
+			float obb2Distance = obb2Corners[cornerIndex].Dot(separateAxis);
+			minOBB2 = (std::min)(obb2Distance, minOBB2);
+			maxOBB2 = (std::max)(obb2Distance, maxOBB2);
+		}
+		//それぞれを射影した範囲長の合計を求める
+		float sumSpan = (maxOBB1 - minOBB1) + (maxOBB2 - minOBB2);
+		//最大範囲を求める
+		float longSpan = (std::max)(maxOBB1, maxOBB2) - (std::min)(minOBB1, minOBB2);
+		//分離軸が見つかる判定
+		if (sumSpan < longSpan) {
+			return false;
+		}
+	}
+	//当たり判定を返す
+	return true;
+}
+
 //AABBを描画する用のデータ
 struct DrawAABBData {
 	AABB aabb;
@@ -363,17 +458,30 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	drawAABB = { {{ 0.2f,0.2f,0.2f },{1.0f,1.0f,1.0f}},BLACK };
 
 	//OBB
-	DrawOBBData drawOBB;
-	drawOBB = { 
+	std::array<DrawOBBData, 2> drawOBBs;
+	drawOBBs[0] = {
 		{
-		{-1.0f,0.0f,0.0f},
+		{0.0f,0.0f,0.0f},
 		{0.0f,0.0f,0.0f},
 		{
 			{1.0f,0.0f,0.0f},
 			{0.0f,1.0f,0.0f},
 			{0.0f,0.0f,1.0f},
 		},
-		{0.5f,0.5f,0.5f}
+		{0.83f,0.26f,0.24f}
+		},
+		BLACK
+	};
+	drawOBBs[1] = {
+		{
+		{0.9f,0.66f,0.78f},
+		{-0.05f,-2.49f,0.15f},
+		{
+			{1.0f,0.0f,0.0f},
+			{0.0f,1.0f,0.0f},
+			{0.0f,0.0f,1.0f},
+		},
+		{0.5f,0.37f,0.5f}
 		},
 		BLACK
 	};
@@ -397,12 +505,12 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 		camera->SetTranslate(cameraTranslate);
 
 		//衝突判定
-		if (IsCollision(drawOBB.obb, drawSphere.sphere)) {
-			drawOBB.color = RED;
-			drawSphere.color = RED;
+		if (IsCollision(drawOBBs[0].obb, drawOBBs[1].obb)) {
+			drawOBBs[0].color = RED;
+			drawOBBs[1].color = RED;
 		} else {
-			drawOBB.color = BLACK;
-			drawSphere.color = BLACK;
+			drawOBBs[0].color = BLACK;
+			drawOBBs[1].color = BLACK;
 		}
 
 #ifdef USE_IMGUI
@@ -414,10 +522,14 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 		ImGui::Separator();
 		ImGui::DragFloat3("aabb.min", &drawAABB.aabb.min.x, 0.1f);
 		ImGui::DragFloat3("aabb.max", &drawAABB.aabb.max.x, 0.1f);
-		ImGui::Separator();
-		ImGui::DragFloat3("obb.center", &drawOBB.obb.center.x, 0.1f);
-		ImGui::DragFloat3("obb.rotate", &drawOBB.obb.rotate.x, 0.1f);
-		ImGui::DragFloat3("obb.size", &drawOBB.obb.size.x, 0.1f);
+		for (int32_t i = 0; i < 2; i++) {
+			ImGui::Separator();
+			ImGui::PushID(i);
+			ImGui::DragFloat3("obb.center", &drawOBBs[i].obb.center.x, 0.1f);
+			ImGui::DragFloat3("obb.rotate", &drawOBBs[i].obb.rotate.x, 0.1f);
+			ImGui::DragFloat3("obb.size", &drawOBBs[i].obb.size.x, 0.1f);
+			ImGui::PopID();
+		}
 #endif // USE_IMGUI
 
 		///
@@ -432,13 +544,15 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 		DrawGrid(camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
 
 		//球の描画
-		DrawSphere(drawSphere.sphere, drawSphere.color, camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
+		//DrawSphere(drawSphere.sphere, drawSphere.color, camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
 
 		//AABBの描画
 		//DrawAABB(drawAABB.aabb, drawAABB.color, camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
 
 		//OBBの描画
-		DrawOBB(drawOBB.obb, drawOBB.color, camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
+		for (DrawOBBData drawOBB : drawOBBs) {
+			DrawOBB(drawOBB.obb, drawOBB.color, camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
+		}
 
 		///
 		/// ↑描画処理ここまで
