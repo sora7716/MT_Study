@@ -28,6 +28,14 @@ struct AABB {
 	Vector3 max;//最大値
 };
 
+//OBB
+struct OBB {
+	Vector3 center;//中心点
+	Vector3 rotate;//回転
+	Vector3 orientations[3];//座法軸。正規化・直行必須
+	Vector3 size;//座標軸方向の長さ半分。中心から面までの距離
+};
+
 /// <summary>
 /// AABB同士の当たり判定
 /// </summary>
@@ -61,6 +69,29 @@ bool IsCollision(const AABB& aabb, const Sphere& sphere) {
 	return distance <= sphere.radius;
 }
 
+/// <summary>
+/// OBBと球の当たり判定
+/// </summary>
+/// <param name="obb">obb</param>
+/// <param name="sphere">球</param>
+/// <returns>衝突したかのフラグ</returns>
+bool IsCollision(const OBB& obb, const Sphere& sphere) {
+	//OBBのワールド行列の逆行列を作成
+	Matrix4x4 obbWorldMatrixInverse = Rendering::MakeOBBWorldMatrix(obb.orientations, obb.center).Inverse();
+
+	//球の中心をOBB空間上に持っていく
+	Vector3 centerInOBBLocalSpace = Rendering::Transform(sphere.center, obbWorldMatrixInverse);
+
+	//AABBをOBBのサイズをもとに作成
+	AABB aabbOBBLocal = { -obb.size,obb.size };
+
+	//OBB空間上に持って行った中心座標を元に球を作成
+	Sphere sphereOBBLocal = { centerInOBBLocalSpace,sphere.radius };
+
+	//AABBと球の当たり判定をする
+	return IsCollision(aabbOBBLocal, sphereOBBLocal);
+}
+
 //AABBを描画する用のデータ
 struct DrawAABBData {
 	AABB aabb;
@@ -70,6 +101,12 @@ struct DrawAABBData {
 //Sphereを描画する用のデータ
 struct DrawSphereData {
 	Sphere sphere;
+	uint32_t color;
+};
+
+//OBBを描画する用のデータ
+struct DrawOBBData {
+	OBB obb;
 	uint32_t color;
 };
 
@@ -286,6 +323,22 @@ void DrawAABB(AABB& aabb, uint32_t color, const Matrix4x4& viewProjection, const
 
 }
 
+//OBBの描画
+void DrawOBB(OBB& obb, uint32_t color, const Matrix4x4& viewProjection, const Matrix4x4& viewport) {
+	//obbの回転行列を作成
+	Rendering::MakeOBBRotateMatrix(obb.orientations, obb.rotate);
+	//obbの回転行列からobbの中心点を加えてワールド行列を作成
+	Matrix4x4 worldMatrix = Rendering::MakeOBBWorldMatrix(obb.orientations, obb.center);
+	//AABBにobbを適応
+	AABB aabb{
+		.min = -obb.size,
+		.max = obb.size
+	};
+	Matrix4x4 worldViewProjection = worldMatrix * viewProjection;
+	//描画
+	DrawAABB(aabb, color, worldViewProjection, viewport);
+}
+
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
@@ -309,6 +362,22 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	DrawAABBData drawAABB;
 	drawAABB = { {{ 0.2f,0.2f,0.2f },{1.0f,1.0f,1.0f}},BLACK };
 
+	//OBB
+	DrawOBBData drawOBB;
+	drawOBB = { 
+		{
+		{-1.0f,0.0f,0.0f},
+		{0.0f,0.0f,0.0f},
+		{
+			{1.0f,0.0f,0.0f},
+			{0.0f,1.0f,0.0f},
+			{0.0f,0.0f,1.0f},
+		},
+		{0.5f,0.5f,0.5f}
+		},
+		BLACK
+	};
+
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
 		// フレームの開始
@@ -328,13 +397,14 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 		camera->SetTranslate(cameraTranslate);
 
 		//衝突判定
-		if (IsCollision(drawAABB.aabb, drawSphere.sphere)) {
-			drawAABB.color = RED;
+		if (IsCollision(drawOBB.obb, drawSphere.sphere)) {
+			drawOBB.color = RED;
 			drawSphere.color = RED;
 		} else {
-			drawAABB.color = BLACK;
+			drawOBB.color = BLACK;
 			drawSphere.color = BLACK;
 		}
+
 #ifdef USE_IMGUI
 		ImGui::DragFloat3("camera.rotate", &cameraRotate.x, 0.1f);
 		ImGui::DragFloat3("camera.translate", &cameraTranslate.x, 0.1f);
@@ -344,6 +414,10 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 		ImGui::Separator();
 		ImGui::DragFloat3("aabb.min", &drawAABB.aabb.min.x, 0.1f);
 		ImGui::DragFloat3("aabb.max", &drawAABB.aabb.max.x, 0.1f);
+		ImGui::Separator();
+		ImGui::DragFloat3("obb.center", &drawOBB.obb.center.x, 0.1f);
+		ImGui::DragFloat3("obb.rotate", &drawOBB.obb.rotate.x, 0.1f);
+		ImGui::DragFloat3("obb.size", &drawOBB.obb.size.x, 0.1f);
 #endif // USE_IMGUI
 
 		///
@@ -361,7 +435,10 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 		DrawSphere(drawSphere.sphere, drawSphere.color, camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
 
 		//AABBの描画
-		DrawAABB(drawAABB.aabb, drawAABB.color, camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
+		//DrawAABB(drawAABB.aabb, drawAABB.color, camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
+
+		//OBBの描画
+		DrawOBB(drawOBB.obb, drawOBB.color, camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
 
 		///
 		/// ↑描画処理ここまで
