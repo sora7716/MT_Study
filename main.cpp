@@ -306,9 +306,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	DrawSphereData drawSphere = { {{0.0f,0.0f,0.0f},1.0f},BLACK };
 
 	//AABB
-	std::array<DrawAABBData, 2>drawAABBs;
-	drawAABBs[0] = { {{-0.5f,-0.5f,-0.5f},{0.0f,0.0f,0.0f}},BLACK };
-	drawAABBs[1] = { {{ 0.2f,0.2f,0.2f },{1.0f,1.0f,1.0f}},BLACK };
+	DrawAABBData drawAABB;
+	drawAABB = { {{ 0.2f,0.2f,0.2f },{1.0f,1.0f,1.0f}},BLACK };
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -329,27 +328,22 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 		camera->SetTranslate(cameraTranslate);
 
 		//衝突判定
-		if (IsCollision(drawAABBs[0].aabb,drawAABBs[1].aabb)) {
-			drawAABBs[0].color = RED;
-			drawAABBs[1].color = RED;
+		if (IsCollision(drawAABB.aabb, drawSphere.sphere)) {
+			drawAABB.color = RED;
+			drawSphere.color = RED;
 		} else {
-			drawAABBs[0].color = BLACK;
-			drawAABBs[1].color = BLACK;
+			drawAABB.color = BLACK;
+			drawSphere.color = BLACK;
 		}
-
 #ifdef USE_IMGUI
 		ImGui::DragFloat3("camera.rotate", &cameraRotate.x, 0.1f);
 		ImGui::DragFloat3("camera.translate", &cameraTranslate.x, 0.1f);
 		ImGui::Separator();
 		ImGui::DragFloat3("sphere.translate", &drawSphere.sphere.center.x, 0.1f);
 		ImGui::DragFloat("sphere.radius", &drawSphere.sphere.radius, 0.1f, 0.0f, 10.0f);
-		for (int32_t i = 0; i < drawAABBs.size(); i++) {
-			ImGui::Separator();
-			ImGui::PushID(i);
-			ImGui::DragFloat3("aabb.min", &drawAABBs[i].aabb.min.x, 0.1f);
-			ImGui::DragFloat3("aabb.max", &drawAABBs[i].aabb.max.x, 0.1f);
-			ImGui::PopID();
-		}
+		ImGui::Separator();
+		ImGui::DragFloat3("aabb.min", &drawAABB.aabb.min.x, 0.1f);
+		ImGui::DragFloat3("aabb.max", &drawAABB.aabb.max.x, 0.1f);
 #endif // USE_IMGUI
 
 		///
@@ -366,9 +360,9 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 		//球の描画
 		DrawSphere(drawSphere.sphere, drawSphere.color, camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
 
-		for (DrawAABBData& drawAABB : drawAABBs) {
-			DrawAABB(drawAABB.aabb, drawAABB.color, camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
-		}
+		//AABBの描画
+		DrawAABB(drawAABB.aabb, drawAABB.color, camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
+
 		///
 		/// ↑描画処理ここまで
 		///
@@ -381,6 +375,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 			break;
 		}
 	}
+
 
 	// ライブラリの終了
 	Novice::Finalize();
