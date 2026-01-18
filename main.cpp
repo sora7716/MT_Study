@@ -17,7 +17,7 @@
 const char kWindowTitle[] = "GSManager";
 
 //球のデータ
-struct SphereData {
+struct Sphere {
 	Vector3 center; //中心座標
 	float radius;   //半径
 };
@@ -26,22 +26,50 @@ struct SphereData {
 struct AABB {
 	Vector3 min;//最小値
 	Vector3 max;//最大値
-
-	/// <summary>
-	/// AABB同士の当たり判定
-	/// </summary>
-	/// <param name="aabb">aabb</param>
-	/// <returns>衝突したかのフラグ</returns>
-	bool IsCollision(const AABB& aabb) {
-		return min.x <= aabb.max.x && max.x >= aabb.min.x &&
-			min.y <= aabb.max.y && max.y >= aabb.min.y &&
-			min.z <= aabb.max.z && max.z >= aabb.min.z;
-	}
 };
 
+/// <summary>
+/// AABB同士の当たり判定
+/// </summary>
+/// <param name="aabb1">aabb1</param>
+/// <param name="aabb2">aabb2</param>
+/// <returns>衝突したかのフラグ</returns>
+bool IsCollision(const AABB& aabb1, const AABB& aabb2) {
+	return aabb1.min.x <= aabb2.max.x && aabb1.max.x >= aabb2.min.x &&
+		aabb1.min.y <= aabb2.max.y && aabb1.max.y >= aabb2.min.y &&
+		aabb1.min.z <= aabb2.max.z && aabb1.max.z >= aabb2.min.z;
+}
+
+/// <summary>
+/// AABBと球の当たり判定
+/// </summary>
+/// <param name="aabb">aabb</param>
+/// <param name="sphere">球</param>
+/// <returns>衝突したかのフラグ</returns>
+bool IsCollision(const AABB& aabb, const Sphere& sphere) {
+	//最近接点を求める
+	Vector3 closestPoint{
+		std::clamp(sphere.center.x, aabb.min.x, aabb.max.x),
+		std::clamp(sphere.center.y, aabb.min.y, aabb.max.y),
+		std::clamp(sphere.center.z, aabb.min.z, aabb.max.z),
+	};
+
+	//最近接点から球の中心との距離を求める
+	float distance = (closestPoint - sphere.center).Length();
+
+	//距離が半径より小さければ衝突
+	return distance <= sphere.radius;
+}
+
 //AABBを描画する用のデータ
-struct Drawaabb {
+struct DrawAABBData {
 	AABB aabb;
+	uint32_t color;
+};
+
+//Sphereを描画する用のデータ
+struct DrawSphereData {
+	Sphere sphere;
 	uint32_t color;
 };
 
@@ -115,12 +143,15 @@ void DrawGrid(const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMa
 
 }
 
+
 /// <summary>
-/// スフィアの描画
+/// 球の描画
 /// </summary>
+/// <param name="sphereData">球</param>
+/// <param name="color">色</param>
 /// <param name="viewProjection">ビュー射影行列</param>
 /// <param name="viewportMatrix">ビューポート行列</param>
-void DrawSphere(const SphereData& sphereData, const Matrix4x4& viewProjection, const Matrix4x4& viewportMatrix) {
+void DrawSphere(const Sphere& sphereData, uint32_t color, const Matrix4x4& viewProjection, const Matrix4x4& viewportMatrix) {
 	const uint32_t kSubdivision = 10;//分割数
 	const float kPi = std::numbers::pi_v<float>;//円周率
 	const float kLonEvery = 2.0f * kPi / static_cast<float>(kSubdivision);//経度分割1つ分の長さ
@@ -174,7 +205,7 @@ void DrawSphere(const SphereData& sphereData, const Matrix4x4& viewProjection, c
 				static_cast<int32_t>(screenA.y),
 				static_cast<int32_t>(screenB.x),
 				static_cast<int32_t>(screenB.y),
-				BLACK
+				color
 			);
 
 			// 緯度線
@@ -183,7 +214,7 @@ void DrawSphere(const SphereData& sphereData, const Matrix4x4& viewProjection, c
 				static_cast<int32_t>(screenA.y),
 				static_cast<int32_t>(screenC.x),
 				static_cast<int32_t>(screenC.y),
-				BLACK
+				color
 			);
 		}
 	}
@@ -272,10 +303,10 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	Vector3 cameraTranslate = { 0.0f,0.0f,-6.49f };
 
 	//球
-	SphereData sphereData = { .center{},.radius = 1.0f };
+	DrawSphereData drawSphere = { {{0.0f,0.0f,0.0f},1.0f},BLACK };
 
 	//AABB
-	std::array<Drawaabb, 2>drawAABBs;
+	std::array<DrawAABBData, 2>drawAABBs;
 	drawAABBs[0] = { {{-0.5f,-0.5f,-0.5f},{0.0f,0.0f,0.0f}},BLACK };
 	drawAABBs[1] = { {{ 0.2f,0.2f,0.2f },{1.0f,1.0f,1.0f}},BLACK };
 
@@ -298,7 +329,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 		camera->SetTranslate(cameraTranslate);
 
 		//衝突判定
-		if (drawAABBs[0].aabb.IsCollision(drawAABBs[1].aabb)) {
+		if (IsCollision(drawAABBs[0].aabb,drawAABBs[1].aabb)) {
 			drawAABBs[0].color = RED;
 			drawAABBs[1].color = RED;
 		} else {
@@ -310,8 +341,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 		ImGui::DragFloat3("camera.rotate", &cameraRotate.x, 0.1f);
 		ImGui::DragFloat3("camera.translate", &cameraTranslate.x, 0.1f);
 		ImGui::Separator();
-		ImGui::DragFloat3("sphere.translate", &sphereData.center.x, 0.1f);
-		ImGui::DragFloat("sphere.radius", &sphereData.radius, 0.1f, 0.0f, 10.0f);
+		ImGui::DragFloat3("sphere.translate", &drawSphere.sphere.center.x, 0.1f);
+		ImGui::DragFloat("sphere.radius", &drawSphere.sphere.radius, 0.1f, 0.0f, 10.0f);
 		for (int32_t i = 0; i < drawAABBs.size(); i++) {
 			ImGui::Separator();
 			ImGui::PushID(i);
@@ -333,9 +364,9 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 		DrawGrid(camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
 
 		//球の描画
-		//DrawSphere(sphereData, camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
+		DrawSphere(drawSphere.sphere, drawSphere.color, camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
 
-		for (Drawaabb& drawAABB : drawAABBs) {
+		for (DrawAABBData& drawAABB : drawAABBs) {
 			DrawAABB(drawAABB.aabb, drawAABB.color, camera->GetViewProjectionMatrix(), camera->GetViewportMatrix());
 		}
 		///
